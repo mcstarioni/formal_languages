@@ -39,5 +39,7 @@ public enum TokenType {
     /**
      * Символ ')'
      */
-    RPAR
+    RPAR,
+
+    VAR
 }

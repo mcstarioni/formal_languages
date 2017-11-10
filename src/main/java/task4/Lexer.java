@@ -56,7 +56,15 @@ public class Lexer {
         String numberText = str.substring(index, matched);
         return new Token(TokenType.NUMBER, numberText, index, matched);
     }
-
+    private Token matchAnyVar()
+    {
+        Pattern varPattern = Pattern.compile("[a-z]+");
+        int matched = match(varPattern);
+        if(matched < 0)
+            return null;
+        String varText = str.substring(index,matched);
+        return new Token(TokenType.VAR, varText,index, matched);
+    }
     private final Map<String, TokenType> SYMBOL_MAP = new HashMap<>();
 
     {
@@ -71,6 +79,7 @@ public class Lexer {
 
     private Token matchAnySymbol() {
         for (Map.Entry<String, TokenType> entry : SYMBOL_MAP.entrySet()) {
+
             String key = entry.getKey();
             TokenType value = entry.getValue();
             Pattern symbolPattern = Pattern.compile(Pattern.quote(key));
@@ -82,6 +91,7 @@ public class Lexer {
         }
         return null;
     }
+
 
     private Token matchSpaces() {
         int i = index;
@@ -120,6 +130,9 @@ public class Lexer {
         Token symbolToken = matchAnySymbol();
         if (symbolToken != null)
             return symbolToken;
+        Token varToken = matchAnyVar();
+        if(varToken != null)
+            return varToken;
         // Символ в текущей позиции не подходит ни к одной из возможных лексем - ошибка:
         throw new ParseException(
             "Unexpected character '" + str.charAt(index) + "'", index
