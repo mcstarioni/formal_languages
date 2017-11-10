@@ -18,6 +18,6 @@ public class VarExpr extends ExprNode
     @Override
     public String toString()
     {
-        return null;
+        return var.text;
     }
 }

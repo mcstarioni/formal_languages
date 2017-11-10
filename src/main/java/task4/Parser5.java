@@ -10,7 +10,8 @@ import java.util.List;
  * множитель ::= ('-')? ЧИСЛО | '(' выражение ')' ('!')?
  * с построением дерева разбора.
  */
-public class Parser5 {
+public class Parser5
+{
 
     /**
      * Список лексем
@@ -21,7 +22,8 @@ public class Parser5 {
      */
     private int index = 0;
 
-    public Parser5(List<Token> tokens) {
+    public Parser5(List<Token> tokens)
+    {
         this.tokens = tokens;
     }
 
@@ -32,7 +34,8 @@ public class Parser5 {
      * @return не null, если текущая лексема предполагаемого типа (при этом текущи индекс сдвигается на 1);
      * null, если текущая лексема другого типа
      */
-    private Token match(TokenType type) {
+    private Token match(TokenType type)
+    {
         if (index >= tokens.size())
             return null;
         Token token = tokens.get(index);
@@ -47,19 +50,24 @@ public class Parser5 {
      *
      * @param message текст сообщения
      */
-    private void error(String message) throws ParseException {
+    private void error(String message) throws ParseException
+    {
         // Позиция ошибки в тексте
         int errorPosition;
-        if (index >= tokens.size()) {
+        if (index >= tokens.size())
+        {
             // Мы стоим в конце текста
-            if (tokens.isEmpty()) {
+            if (tokens.isEmpty())
+            {
                 // Лексем не было вообще - текст пустой; указываем на начало текста
                 errorPosition = 0;
-            } else {
+            } else
+            {
                 // Берем координату после последней лексемы
                 errorPosition = tokens.get(tokens.size() - 1).to;
             }
-        } else {
+        } else
+        {
             // Берем координату текущей лексемы
             Token token = tokens.get(index);
             errorPosition = token.from;
@@ -74,8 +82,10 @@ public class Parser5 {
      * @return не null, если текущая лексема одного из предполагаемых типов (при этом текущи индекс сдвигается на 1);
      * null, если текущая лексема другого типа
      */
-    private Token matchAny(TokenType... types) {
-        for (TokenType type : types) {
+    private Token matchAny(TokenType... types)
+    {
+        for (TokenType type : types)
+        {
             Token matched = match(type);
             if (matched != null)
                 return matched;
@@ -88,23 +98,23 @@ public class Parser5 {
      *
      * @return узел дерева, соответствующий множителю
      */
-    private ExprNode matchMnozhitel() throws ParseException {
+    private ExprNode matchMnozhitel() throws ParseException
+    {
         // В начале может стоять унарный минус:
         Token minus = match(TokenType.SUB);
         Token number = match(TokenType.NUMBER);
         Token var = match(TokenType.VAR);
         ExprNode result;
-        if (number != null) {
+        if (number != null)
+        {
             // Если это ЧИСЛО, то результат - узел для числа:
             result = new NumbExpr(number);
-        }
-        else
+        } else
         {
-            if(var != null)
+            if (var != null)
             {
                 result = new VarExpr(var);
-            }
-            else
+            } else
             {
                 if (match(TokenType.LPAR) != null)
                 {
@@ -135,6 +145,7 @@ public class Parser5 {
         }
         return result;
     }
+
     private ExprNode matchVar() throws ParseException
     {
         return null;
@@ -145,18 +156,22 @@ public class Parser5 {
      *
      * @return узел дерева, соответствующий слагаемому
      */
-    private ExprNode matchSlagaemoe() throws ParseException {
+    private ExprNode matchSlagaemoe() throws ParseException
+    {
         // В начале должен быть множитель:
         ExprNode leftNode = matchMnozhitel();
-        while (true) {
+        while (true)
+        {
             // Пока есть символ '*' или '/'...
             Token op = matchAny(TokenType.MUL, TokenType.DIV);
-            if (op != null) {
+            if (op != null)
+            {
                 // Требуем после умножения/деления снова множитель:
                 ExprNode rightNode = matchMnozhitel();
                 // Из двух множителей формируем дерево с двумя поддеревьями:
                 leftNode = new BinOpExpr(leftNode, op, rightNode);
-            } else {
+            } else
+            {
                 break;
             }
         }
@@ -171,25 +186,32 @@ public class Parser5 {
      *
      * @return дерево разбора выражения
      */
-    public ExprNode matchExpression() throws ParseException {
+    public ExprNode matchExpression() throws ParseException
+    {
         // В начале должно быть слагаемое:
         ExprNode leftNode = matchSlagaemoe();
-        while (true) {
+        while (true)
+        {
             // Пока есть символ '+' или '-'...
             Token op = matchAny(TokenType.ADD, TokenType.SUB);
-            if (op != null) {
+            if (op != null)
+            {
                 // Требуем после плюса/минуса снова слагаемое:
                 ExprNode rightNode = matchSlagaemoe();
                 // Из двух слагаемых формируем дерево с двумя поддеревьями:
                 leftNode = new BinOpExpr(leftNode, op, rightNode);
-            } else {
+            } else
+            {
                 break;
             }
         }
         return leftNode;
     }
 
+    public StatementNode matchStatement()
+    {
 
+    }
 
 //    private static double eval(ExprNode expr) {
 //        if (expr.isNumber) {
@@ -227,7 +249,7 @@ public class Parser5 {
         ExprNode exprTreeRoot = parser.matchExpression();
         System.out.println(exprTreeRoot.toString());
         HashMap<String,Double> arg = new HashMap<String, Double>();
-        arg.put("x",10.0);
+        arg.put("x",3.0);
         System.out.println(exprTreeRoot.eval(arg));
     }
 }
