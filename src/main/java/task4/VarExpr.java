@@ -13,9 +13,8 @@ public class VarExpr extends ExprNode
     @Override
     public double eval(Map<String, Double> vars)
     {
-        return 0.0;
+        return vars.get(var.text);
     }
-
     @Override
     public String toString()
     {

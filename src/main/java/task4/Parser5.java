@@ -1,5 +1,6 @@
 package task4;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -103,22 +104,25 @@ public class Parser5 {
             {
                 result = new VarExpr(var);
             }
-        }
-            if (match(TokenType.LPAR) != null)
-            {
-                // Если это открывающая скобка, то вызываем разбор выражения в скобках:
-                ExprNode nested = matchExpression();
-                if (match(TokenType.RPAR) == null) {
-                    error("Missing ')'");
-                }
-                result = nested;
-            }
             else
             {
-                // Иначе ошибка - других вариантов кроме числа и скобки быть не может:
-                error("Number or '(' expected");
-                return null;
+                if (match(TokenType.LPAR) != null)
+                {
+                    // Если это открывающая скобка, то вызываем разбор выражения в скобках:
+                    ExprNode nested = matchExpression();
+                    if (match(TokenType.RPAR) == null)
+                    {
+                        error("Missing ')'");
+                    }
+                    result = nested;
+                } else
+                {
+                    // Иначе ошибка - других вариантов кроме числа и скобки быть не может:
+                    error("Number or '(' expected");
+                    return null;
+                }
             }
+        }
         // В конце может стоять факториал:
         Token factorial = match(TokenType.EXCLAM);
         if (factorial != null)
@@ -216,12 +220,14 @@ public class Parser5 {
      * Проверка грамматического разбора выражения
      */
     public static void main(String[] args) throws ParseException {
-        String expression = "-1.23 - (2 * 3!  - 13.23) + 2";
+        String expression = "-1.23 - (2 * 3!  - 13.23) + 2*x";
         Lexer lexer = new Lexer(expression);
         List<Token> allTokens = lexer.getAllTokens();
         Parser5 parser = new Parser5(allTokens);
         ExprNode exprTreeRoot = parser.matchExpression();
         System.out.println(exprTreeRoot.toString());
-        System.out.println(exprTreeRoot.eval());
+        HashMap<String,Double> arg = new HashMap<String, Double>();
+        arg.put("x",10.0);
+        System.out.println(exprTreeRoot.eval(arg));
     }
 }
