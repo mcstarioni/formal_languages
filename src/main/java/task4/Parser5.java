@@ -2,6 +2,7 @@ package task4;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Грамматический разбор грамматики
@@ -210,7 +211,11 @@ public class Parser5
 
     public StatementNode matchStatement()
     {
-
+        return null;
+    }
+    public List<StatementNode> matchProgramm()
+    {
+        return null;
     }
 
 //    private static double eval(ExprNode expr) {
@@ -241,6 +246,17 @@ public class Parser5
     /**
      * Проверка грамматического разбора выражения
      */
+    public void eval(Map<String,Double> vars,List<StatementNode> programm)
+    {
+        for(StatementNode s: programm)
+        {
+            //vars.replace(s.)
+        }
+    }
+    public double eval(Map<String,Double> vars, ExprNode root)
+    {
+        return root.eval(vars);
+    }
     public static void main(String[] args) throws ParseException {
         String expression = "-1.23 - (2 * 3!  - 13.23) + 2*x";
         Lexer lexer = new Lexer(expression);

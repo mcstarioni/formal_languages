@@ -41,5 +41,7 @@ public enum TokenType {
      */
     RPAR,
 
-    VAR
+    VAR,
+
+    COMPARISON
 }
