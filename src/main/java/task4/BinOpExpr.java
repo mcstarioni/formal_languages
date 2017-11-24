@@ -23,6 +23,18 @@ public class BinOpExpr extends ExprNode
             case SUB: return leftValue - rightValue;
             case MUL: return leftValue * rightValue;
             case DIV: return leftValue / rightValue;
+            case COMPARISON: return (evalComparison(leftValue,rightValue))?1.0:0.0;
+        }
+        throw new IllegalStateException();
+    }
+    private boolean evalComparison(double lv, double rv)
+    {
+        switch (op.text)
+        {
+            case "<>": return lv != rv;
+            case "<=": return lv <= rv;
+            case ">=": return lv >= rv;
+            case "==": return lv == rv;
         }
         throw new IllegalStateException();
     }

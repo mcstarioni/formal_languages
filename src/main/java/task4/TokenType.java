@@ -43,5 +43,9 @@ public enum TokenType {
 
     VAR,
 
-    COMPARISON
+    COMPARISON,
+
+    ASSIGNMENT,
+
+    EOS
 }

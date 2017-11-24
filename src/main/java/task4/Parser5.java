@@ -13,7 +13,6 @@ import java.util.Map;
  */
 public class Parser5
 {
-
     /**
      * Список лексем
      */
@@ -22,12 +21,10 @@ public class Parser5
      * Индекс текущей лексемы
      */
     private int index = 0;
-
     public Parser5(List<Token> tokens)
     {
         this.tokens = tokens;
     }
-
     /**
      * Проверка типа текущей лексемы.
      *
@@ -99,12 +96,13 @@ public class Parser5
      *
      * @return узел дерева, соответствующий множителю
      */
-    private ExprNode matchMnozhitel() throws ParseException
+    private ExprNode matchMnozhitel() throws ParseException,EOSException
     {
         // В начале может стоять унарный минус:
         Token minus = match(TokenType.SUB);
         Token number = match(TokenType.NUMBER);
         Token var = match(TokenType.VAR);
+        Token eos = match(TokenType.EOS);
         ExprNode result;
         if (number != null)
         {
@@ -120,7 +118,7 @@ public class Parser5
                 if (match(TokenType.LPAR) != null)
                 {
                     // Если это открывающая скобка, то вызываем разбор выражения в скобках:
-                    ExprNode nested = matchExpression();
+                    ExprNode nested = matchComparison();
                     if (match(TokenType.RPAR) == null)
                     {
                         error("Missing ')'");
@@ -144,23 +142,39 @@ public class Parser5
         {
             result = new UnOpExpr(minus, result);
         }
+        if(eos != null)
+        {
+            throw new EOSException(result);
+        }
         return result;
     }
 
-    private ExprNode matchVar() throws ParseException
-    {
-        return null;
-    }
+//    private ExprNode matchVar() throws ParseException
+//    {
+//        Token var = match(TokenType.VAR);
+//        if(var != null)
+//        {
+//            return var;
+//        }
+//    }
 
     /**
      * Метод для нетерминального символа 'слагаемое'.
      *
      * @return узел дерева, соответствующий слагаемому
      */
-    private ExprNode matchSlagaemoe() throws ParseException
+    private ExprNode matchSlagaemoe() throws ParseException,EOSException
     {
         // В начале должен быть множитель:
-        ExprNode leftNode = matchMnozhitel();
+        ExprNode leftNode = null;
+        try
+        {
+            leftNode = matchMnozhitel();
+        }
+        catch (EOSException eos)
+        {
+            throw new EOSException( eos.node);
+        }
         while (true)
         {
             // Пока есть символ '*' или '/'...
@@ -168,7 +182,15 @@ public class Parser5
             if (op != null)
             {
                 // Требуем после умножения/деления снова множитель:
-                ExprNode rightNode = matchMnozhitel();
+                ExprNode rightNode;
+                try
+                {
+                    rightNode = matchMnozhitel();
+                }
+                catch (EOSException eos)
+                {
+                    throw new EOSException(new BinOpExpr(leftNode,op,eos.node));
+                }
                 // Из двух множителей формируем дерево с двумя поддеревьями:
                 leftNode = new BinOpExpr(leftNode, op, rightNode);
             } else
@@ -176,7 +198,7 @@ public class Parser5
                 break;
             }
         }
-        return leftNode;
+        return null;
     }
 
     /**
@@ -187,7 +209,7 @@ public class Parser5
      *
      * @return дерево разбора выражения
      */
-    public ExprNode matchExpression() throws ParseException
+    public ExprNode matchExpression() throws ParseException,EOSException
     {
         // В начале должно быть слагаемое:
         ExprNode leftNode = matchSlagaemoe();
@@ -208,40 +230,66 @@ public class Parser5
         }
         return leftNode;
     }
-
-    public StatementNode matchStatement()
+    public ExprNode matchComparison() throws ParseException,EOSException
     {
-        return null;
-    }
-    public List<StatementNode> matchProgramm()
-    {
-        return null;
+        ExprNode leftNode = matchExpression();
+        while (true)
+        {
+            Token op = matchAny(TokenType.COMPARISON);
+            if(op != null)
+            {
+                ExprNode rightNode = matchExpression();
+                leftNode = new BinOpExpr(leftNode,op,rightNode);
+            }
+            else
+            {
+                break;
+            }
+        }
+        return leftNode;
     }
 
-//    private static double eval(ExprNode expr) {
-//        if (expr.isNumber) {
-//            String text = expr.number.text;
-//            return Double.parseDouble(text);
-//        } else {
-//            if (expr.left == null) {
-//                double rightValue = eval(expr.right);
-//                switch (expr.op.type) {
-//                case SUB: return -rightValue;
-//                case EXCLAM: return factorial((long) rightValue);
-//                }
-//            } else {
-//                double leftValue = eval(expr.left);
-//                double rightValue = eval(expr.right);
-//                switch (expr.op.type) {
-//                case ADD: return leftValue + rightValue;
-//                case SUB: return leftValue - rightValue;
-//                case MUL: return leftValue * rightValue;
-//                case DIV: return leftValue / rightValue;
-//                }
-//            }
-//            throw new IllegalStateException();
-//        }
-//    }
+    public StatementNode matchStatement() throws ParseException,EOSException
+    {
+        Token var = match(TokenType.VAR);
+        Token assignment = match(TokenType.ASSIGNMENT);
+        ExprNode expr = matchComparison();
+        //Token eos = match(TokenType.EOS);
+        if(var != null && assignment != null)
+        {
+            return new AssignStatement(var, expr);
+        }
+        else
+        {
+            throw new ParseException("Not a statement",0);
+        }
+    }
+    public Program matchProgram() throws ParseException
+    {
+        Program p = new Program();
+        do
+        {
+            StatementNode st = null;
+            try
+            {
+                 st = matchStatement();
+            }
+            catch (EOSException es)
+            {
+
+            }
+            if(st != null)
+            {
+                p.addStatement(st);
+            }
+            else
+            {
+                break;
+            }
+        }while (true);
+        return p;
+    }
+
 
     /**
      * Проверка грамматического разбора выражения
@@ -258,14 +306,20 @@ public class Parser5
         return root.eval(vars);
     }
     public static void main(String[] args) throws ParseException {
-        String expression = "-1.23 - (2 * 3!  - 13.23) + 2*x";
+        String expression = "x = -1.23 ; " +
+                            "y = x*5 + 2;" ;
+        //String expression = "(5 <> 5) == (2 <> 3)";
         Lexer lexer = new Lexer(expression);
         List<Token> allTokens = lexer.getAllTokens();
         Parser5 parser = new Parser5(allTokens);
-        ExprNode exprTreeRoot = parser.matchExpression();
-        System.out.println(exprTreeRoot.toString());
-        HashMap<String,Double> arg = new HashMap<String, Double>();
-        arg.put("x",3.0);
-        System.out.println(exprTreeRoot.eval(arg));
+        Program program = parser.matchProgram();
+        //System.out.println(exprTreeRoot.toString());
+        //HashMap<String,Double> arg = new HashMap<String, Double>();
+        //arg.put("x",3.0);
+        System.out.println(program.toString());
+//        program.vars.
+//                stream().
+//                forEach(variable -> System.out.println(
+//                        ((Variable)variable).getName()+ " : " +  ((Variable)variable).getValue()));
     }
 }

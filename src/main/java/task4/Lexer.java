@@ -1,9 +1,8 @@
 package task4;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,7 +46,10 @@ public class Lexer {
             return -1;
         }
     }
-
+    private Token matchEOS()
+    {
+        return matchPattern(TokenType.EOS,";");
+    }
     private Token matchNumber() {
         Pattern numberPattern = Pattern.compile("[0-9]+(\\.[0-9]*)?|\\.[0-9]+");
         int matched = match(numberPattern);
@@ -58,12 +60,24 @@ public class Lexer {
     }
     private Token matchAnyVar()
     {
-        Pattern varPattern = Pattern.compile("[a-z]+");
+        return matchPattern(TokenType.VAR,"[a-z]+");
+    }
+    private Token matchAssignment()
+    {
+        return matchPattern(TokenType.ASSIGNMENT, "=");
+    }
+    private Token matchComparison()
+    {
+        return matchPattern(TokenType.COMPARISON, "[<>=]=|<>|[<>]");
+    }
+    private Token matchPattern(TokenType type, String pattern)
+    {
+        Pattern varPattern = Pattern.compile(pattern);
         int matched = match(varPattern);
         if(matched < 0)
             return null;
         String varText = str.substring(index,matched);
-        return new Token(TokenType.VAR, varText,index, matched);
+        return new Token(type, varText,index, matched);
     }
     private final Map<String, TokenType> SYMBOL_MAP = new HashMap<>();
 
@@ -120,24 +134,23 @@ public class Lexer {
         // Мы стоим в конце строки - больше нет лексем:
         if (index >= str.length())
             return null;
-        // Перебираем все возможные типы лексем:
-        Token spacesToken = matchSpaces();
-        if (spacesToken != null)
-            return spacesToken;
-        Token numberToken = matchNumber();
-        if (numberToken != null)
-            return numberToken;
-        Token symbolToken = matchAnySymbol();
-        if (symbolToken != null)
-            return symbolToken;
-        Token varToken = matchAnyVar();
-        if(varToken != null)
-            return varToken;
-        // Символ в текущей позиции не подходит ни к одной из возможных лексем - ошибка:
-        throw new ParseException(
+
+        List<Supplier<Token>> list = Arrays.asList(
+                this::matchSpaces,
+                this::matchNumber,
+                this::matchComparison,
+                this::matchAssignment,
+                this::matchAnySymbol,
+                this::matchAnyVar,
+                this::matchEOS);
+        Optional<Token> token = list.stream().map(Supplier::get).filter(Objects::nonNull).findFirst();
+        if (!token.isPresent())
+            throw new ParseException(
             "Unexpected character '" + str.charAt(index) + "'", index
         );
+        return token.get();
     }
+
 
     /**
      * Получение лексемы, стоящей в текущей позиции и перемещение текущей позиции дальше.
@@ -171,3 +184,21 @@ public class Lexer {
         return allTokens;
     }
 }
+// Перебираем все возможные типы лексем:
+//        Token spacesToken = matchSpaces();
+//        if (spacesToken != null)
+//            return spacesToken;
+//        Token numberToken = matchNumber();
+//        if (numberToken != null)
+//            return numberToken;
+//        Token symbolToken = matchAnySymbol();
+//        if (symbolToken != null)
+//            return symbolToken;
+//        Token varToken = matchAnyVar();
+//        if(varToken != null)
+//            return varToken;
+//        Token compToken = matchComparison();
+//        if(compToken != null)
+//            return compToken;
+//        Token
+// Символ в текущей позиции не подходит ни к одной из возможных лексем - ошибка:
