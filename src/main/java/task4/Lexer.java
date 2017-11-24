@@ -1,11 +1,9 @@
 package task4;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Лексический анализатор
@@ -65,25 +63,33 @@ public class Lexer {
         String varText = str.substring(index,matched);
         return new Token(TokenType.VAR, varText,index, matched);
     }
-    private final Map<String, TokenType> SYMBOL_MAP = new HashMap<>();
+    //private final Map<String, TokenType> SYMBOL_MAP = new HashMap<>();
+    private final List<Node<Pattern, TokenType>> SYMBOLS = new LinkedList<>();
 
     {
-        SYMBOL_MAP.put("+", TokenType.ADD);
-        SYMBOL_MAP.put("-", TokenType.SUB);
-        SYMBOL_MAP.put("*", TokenType.MUL);
-        SYMBOL_MAP.put("/", TokenType.DIV);
-        SYMBOL_MAP.put("!", TokenType.EXCLAM);
-        SYMBOL_MAP.put("(", TokenType.LPAR);
-        SYMBOL_MAP.put(")", TokenType.RPAR);
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("+")), TokenType.ADD));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("-")), TokenType.SUB));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("*")), TokenType.MUL));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("/")), TokenType.DIV));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("!")), TokenType.EXCLAM));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("(")), TokenType.LPAR));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote(")")), TokenType.RPAR));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote(":=")), TokenType.ASSIGN));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote(";")), TokenType.SEP));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("==")), TokenType.EQ));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("sin")), TokenType.SIN));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("cos")), TokenType.COS));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("exp")), TokenType.EXP));
+        SYMBOLS.add(new Node<>(Pattern.compile(Pattern.quote("^")), TokenType.POW));
+        SYMBOLS.add(new Node<>(Pattern.compile("func [a-z]+[(]([a-z]+,)+[a-z][)]:[\\s\\S]+return[^;]+"), TokenType.FUNC_DEC));
+        SYMBOLS.add(new Node<>(Pattern.compile("[a-z]+[(]([\\d]+,)+[\\d][)]"), TokenType.FUNC_EXE));
     }
 
     private Token matchAnySymbol() {
-        for (Map.Entry<String, TokenType> entry : SYMBOL_MAP.entrySet()) {
+        for (Node<Pattern, TokenType> node : SYMBOLS) {
 
-            String key = entry.getKey();
-            TokenType value = entry.getValue();
-            Pattern symbolPattern = Pattern.compile(Pattern.quote(key));
-            int matched = match(symbolPattern);
+            TokenType value = node.getValue();
+            int matched = match(node.getKey());
             if (matched < 0)
                 continue;
             String symbolText = str.substring(index, matched);
@@ -169,5 +175,72 @@ public class Lexer {
             allTokens.add(token);
         }
         return allTokens;
+    }
+    private static class Node<K,V>
+    {
+        K key;
+        V value;
+
+        public Node(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        public K getKey() {
+            return key;
+        }
+
+        public V getValue() {
+            return value;
+        }
+    }
+    static Function parseFunction(Token t) throws ParseException
+    {
+        if (t.type != TokenType.FUNC_DEC)
+            throw new RuntimeException("Function was expected!");
+        int startIndex = 0;
+        String function = t.text;
+
+        Pattern p = Pattern.compile("func\\s+");
+        Matcher m = p.matcher(function);
+        m.region(startIndex, function.length());
+        if (!m.lookingAt())
+            throw new ParseException("'func' was expected", startIndex+t.from);// TODO: 23.11.2017
+        startIndex = m.end();
+        //Scanning name
+        p = Pattern.compile("[a-z]+");
+        m = p.matcher(function);
+        m.region(startIndex, function.length());
+        if (!m.lookingAt())
+            throw  new ParseException("Function name was expected", startIndex+t.from); // TODO: 23.11.2017
+        String name = function.substring(startIndex, m.end());
+        startIndex = m.end();
+        //Scanning variables
+        p = Pattern.compile("[(]([a-z]+,)+[a-z][)]:");
+        m = p.matcher(function);
+        m.region(startIndex, function.length());
+        if (!m.lookingAt())
+            throw new ParseException("Arguments were expected!", startIndex+t.from);
+        String[] variables = function.substring(startIndex+1, m.end()-2).split(",");
+        startIndex = m.end();
+        //Scanning tokens;
+        p = Pattern.compile("([\\s\\S]+)return([\\s\\S]+)");
+        m = p.matcher(function);//.substring(startIndex, function.length()));
+        //m.region(startIndex, function.length());
+        if (!m.find(startIndex))
+            throw new ParseException("Exception", startIndex+t.from);
+        List<Token> code = new Lexer(m.group(1)).getAllTokens();
+        List<Token> returnStatement = new Lexer(m.group(2)).getAllTokens();
+
+        return new Function(variables, name, code, returnStatement);
+    }
+    static Double[] parseFuncCall(String func) throws ParseException {
+        Pattern p = Pattern.compile("[a-z]+");
+        Matcher m = p.matcher(func);
+        String name = func.substring(0,m.end());
+        if (Function.get(name)==null)
+            throw new ParseException("Function wasn't found!",0); // TODO: 24.11.2017
+        func = func.substring(m.end()+1, func.length()-1);
+        return (Double[]) Arrays.stream(func.split(",")).map(Double::parseDouble).collect(Collectors.toList()).toArray();
     }
 }

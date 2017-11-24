@@ -1,9 +1,11 @@
 package task4;
 
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 public class BinOpExpr extends ExprNode
 {
+
     private ExprNode left;
     private ExprNode right;
     private Token op;
@@ -18,13 +20,12 @@ public class BinOpExpr extends ExprNode
     {
         double leftValue = left.eval(vars);
         double rightValue = right.eval(vars);
-        switch (op.type) {
-            case ADD: return leftValue + rightValue;
-            case SUB: return leftValue - rightValue;
-            case MUL: return leftValue * rightValue;
-            case DIV: return leftValue / rightValue;
+        try {
+            return op.type.binaryOperator(leftValue, rightValue);
+        } catch (UnsupportedOperationException e)
+        {
+            throw new IllegalStateException();
         }
-        throw new IllegalStateException();
     }
     @Override
     public String toString()

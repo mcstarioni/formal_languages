@@ -1,17 +1,17 @@
 package task4;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Грамматический разбор грамматики
- * выражение ::= слагаемое (('+'|'-') слагаемое)*
- * слагаемое ::= множитель (('*'|'/') множитель)*
- * множитель ::= ('-')? ЧИСЛО | '(' выражение ')' ('!')?
+ * выражение            ::=         слагаемое (('+'|'-') слагаемое)*
+ * слагаемое            ::=         множитель (('*'|'/') множитель)*
+ * множитель            ::=         ('-')? функция| ЧИСЛО |'(' выражение ')' ('!')?
+ * функция     ::=         множитель
  * с построением дерева разбора.
  */
-public class Parser5
+public class Parser
 {
 
     /**
@@ -22,8 +22,13 @@ public class Parser5
      * Индекс текущей лексемы
      */
     private int index = 0;
+    private final TokenType[] highPriority = new TokenType[]{TokenType.MUL, TokenType.DIV,
+        TokenType.POW, TokenType.EQ};
 
-    public Parser5(List<Token> tokens)
+    private final TokenType[] lowPriority = new TokenType[]{TokenType.ADD, TokenType.SUB};
+    //private final TokenType[] unaryOps = new TokenType[]{TokenType.SIN, TokenType.COS, TokenType.EXP};
+
+    public Parser(List<Token> tokens)
     {
         this.tokens = tokens;
     }
@@ -83,10 +88,8 @@ public class Parser5
      * @return не null, если текущая лексема одного из предполагаемых типов (при этом текущи индекс сдвигается на 1);
      * null, если текущая лексема другого типа
      */
-    private Token matchAny(TokenType... types)
-    {
-        for (TokenType type : types)
-        {
+    private Token matchAny(TokenType... types) {
+        for (TokenType type : types) {
             Token matched = match(type);
             if (matched != null)
                 return matched;
@@ -94,17 +97,19 @@ public class Parser5
         return null;
     }
 
+
     /**
      * Метод для нетерминального символа 'множитель'.
      *
      * @return узел дерева, соответствующий множителю
      */
-    private ExprNode matchMnozhitel() throws ParseException
+    private ExprNode matchFactor() throws ParseException
     {
         // В начале может стоять унарный минус:
         Token minus = match(TokenType.SUB);
         Token number = match(TokenType.NUMBER);
-        Token var = match(TokenType.VAR);
+        Token func = matchAny(TokenType.FUNC_EXE);
+        Token var = (func == null)? match(TokenType.VAR): null;
         ExprNode result;
         if (number != null)
         {
@@ -116,6 +121,12 @@ public class Parser5
             {
                 result = new VarExpr(var);
             } else
+            if (func != null)
+            {
+                Double[] d = Lexer.parseFuncCall(func.text);throw new UnsupportedOperationException();
+                // TODO: 24.11.2017
+            }
+            else
             {
                 if (match(TokenType.LPAR) != null)
                 {
@@ -134,6 +145,7 @@ public class Parser5
                 }
             }
         }
+
         // В конце может стоять факториал:
         Token factorial = match(TokenType.EXCLAM);
         if (factorial != null)
@@ -147,9 +159,9 @@ public class Parser5
         return result;
     }
 
-    private ExprNode matchVar() throws ParseException
+    private Token matchVar() throws ParseException
     {
-        return null;
+        return match(TokenType.VAR);
     }
 
     /**
@@ -157,18 +169,18 @@ public class Parser5
      *
      * @return узел дерева, соответствующий слагаемому
      */
-    private ExprNode matchSlagaemoe() throws ParseException
+    private ExprNode matchTerm() throws ParseException
     {
         // В начале должен быть множитель:
-        ExprNode leftNode = matchMnozhitel();
+        ExprNode leftNode = matchFactor();
         while (true)
         {
-            // Пока есть символ '*' или '/'...
-            Token op = matchAny(TokenType.MUL, TokenType.DIV);
+            // Пока есть символ '*' или '/' или '=='...
+            Token op = matchAny(highPriority);
             if (op != null)
             {
                 // Требуем после умножения/деления снова множитель:
-                ExprNode rightNode = matchMnozhitel();
+                ExprNode rightNode = matchFactor();
                 // Из двух множителей формируем дерево с двумя поддеревьями:
                 leftNode = new BinOpExpr(leftNode, op, rightNode);
             } else
@@ -190,15 +202,15 @@ public class Parser5
     public ExprNode matchExpression() throws ParseException
     {
         // В начале должно быть слагаемое:
-        ExprNode leftNode = matchSlagaemoe();
+        ExprNode leftNode = matchTerm();
         while (true)
         {
             // Пока есть символ '+' или '-'...
-            Token op = matchAny(TokenType.ADD, TokenType.SUB);
+            Token op = matchAny(lowPriority);
             if (op != null)
             {
                 // Требуем после плюса/минуса снова слагаемое:
-                ExprNode rightNode = matchSlagaemoe();
+                ExprNode rightNode = matchTerm();
                 // Из двух слагаемых формируем дерево с двумя поддеревьями:
                 leftNode = new BinOpExpr(leftNode, op, rightNode);
             } else
@@ -208,64 +220,74 @@ public class Parser5
         }
         return leftNode;
     }
+    public void matchFunction() throws ParseException
+    {
 
-    public StatementNode matchStatement()
-    {
-        return null;
-    }
-    public List<StatementNode> matchProgramm()
-    {
-        return null;
     }
 
-//    private static double eval(ExprNode expr) {
-//        if (expr.isNumber) {
-//            String text = expr.number.text;
-//            return Double.parseDouble(text);
-//        } else {
-//            if (expr.left == null) {
-//                double rightValue = eval(expr.right);
-//                switch (expr.op.type) {
-//                case SUB: return -rightValue;
-//                case EXCLAM: return factorial((long) rightValue);
-//                }
-//            } else {
-//                double leftValue = eval(expr.left);
-//                double rightValue = eval(expr.right);
-//                switch (expr.op.type) {
-//                case ADD: return leftValue + rightValue;
-//                case SUB: return leftValue - rightValue;
-//                case MUL: return leftValue * rightValue;
-//                case DIV: return leftValue / rightValue;
-//                }
-//            }
-//            throw new IllegalStateException();
-//        }
-//    }
-
-    /**
-     * Проверка грамматического разбора выражения
-     */
-    public void eval(Map<String,Double> vars,List<StatementNode> programm)
-    {
-        for(StatementNode s: programm)
+    public AssignStatementNode matchStatement() throws ParseException {
+        Token t;
+        while ((t = match(TokenType.FUNC_DEC)) != null)
         {
-            //vars.replace(s.)
+            Function.addFunction(Lexer.parseFunction(t));
+            if (match(TokenType.SEP) == null)
+                throw new ParseException("; was expected", tokens.get(index).from);
         }
+        Token var = matchVar();
+        if (var != null) {
+            match(TokenType.ASSIGN);
+            ExprNode rightNode = matchExpression();
+            return new AssignStatementNode(new VarExpr(var), rightNode);
+        }
+        else
+            throw new ParseException("Unexpected error!", 0);// TODO: 23.11.2017
     }
-    public double eval(Map<String,Double> vars, ExprNode root)
+    public List<AssignStatementNode> matchProgram() throws ParseException {
+        List<AssignStatementNode> nodes = new LinkedList<>();
+        AssignStatementNode n;
+        while (index < tokens.size()-1) {
+            n = matchStatement();
+            nodes.add(n);
+            Token t = match(TokenType.SEP);
+            if (t == null)
+                throw new ParseException("; is expected", index);
+        }
+        return nodes;
+    }
+
+    public static Map<String, Double> eval(List<AssignStatementNode> nodes)
     {
-        return root.eval(vars);
+        Map<String, Double> vars = new HashMap<>();
+        for (AssignStatementNode node: nodes) {
+            double value = node.execute(vars);
+            String var = node.var.var.text;
+            if (vars.containsKey(var))
+            {
+                vars.replace(var, value);
+            }
+            else
+                vars.put(var, value);
+        }
+        return vars;
     }
-    public static void main(String[] args) throws ParseException {
-        String expression = "-1.23 - (2 * 3!  - 13.23) + 2*x";
-        Lexer lexer = new Lexer(expression);
+    public Map<String, Double> execute()
+    {
+        return eval(matchProgram());
+    }
+    public static Map<String, Double> compile(String code) throws ParseException
+    {
+
+        Lexer lexer = new Lexer(code);
         List<Token> allTokens = lexer.getAllTokens();
-        Parser5 parser = new Parser5(allTokens);
-        ExprNode exprTreeRoot = parser.matchExpression();
-        System.out.println(exprTreeRoot.toString());
-        HashMap<String,Double> arg = new HashMap<String, Double>();
-        arg.put("x",3.0);
-        System.out.println(exprTreeRoot.eval(arg));
+        allTokens.forEach(System.out::println);
+
+        Parser parser = new Parser(allTokens);
+        return parser.execute();
     }
+    public static void main(String[] args) throws ParseException, IOException {
+        String expression = "func f(a,b,c): a:=1; b:= 2; return a+b; f := f(1,2,3);";
+        compile(expression);
+
+    }
+
 }

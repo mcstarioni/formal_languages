@@ -3,7 +3,7 @@ package task4;
 /**
  * Ошибка разбора
  */
-public class ParseException extends Exception {
+public class ParseException extends RuntimeException {
 
     public final int index;
 

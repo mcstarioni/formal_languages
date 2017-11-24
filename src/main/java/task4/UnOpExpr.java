@@ -15,25 +15,19 @@ public class UnOpExpr extends ExprNode
     public double eval(Map<String, Double> vars)
     {
         double rightValue = right.eval(vars);
-        switch (op.type)
+        try
         {
-            case SUB:
-                return -rightValue;
-            case EXCLAM:
-                return factorial((long) rightValue);
+            return op.type.unaryOperator(rightValue);
         }
-        throw new IllegalStateException();
-    }
-    private static long factorial(long n) {
-        long result = 1;
-        for (long i = 2; i <= n; i++) {
-            result *= i;
+        catch (UnsupportedOperationException e)
+        {
+            throw new IllegalStateException();
         }
-        return result;
     }
+
     @Override
     public String toString()
     {
-        return op.text + right.toString();
+        return op.text + "("+right.toString()+")";
     }
 }
