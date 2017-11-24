@@ -6,9 +6,9 @@ import org.antlr.v4.runtime.CommonTokenStream;
 public class Runner {
     public static void main(String[] args) {
         String test = "1+2+3";
-        firstLexer lexer = new firstLexer(CharStreams.fromString(test));
-        firstParser p = new firstParser(new CommonTokenStream(lexer));
-        firstParser.ExprContext context = p.expr();
+        ExprLexer lexer = new ExprLexer(CharStreams.fromString(test));
+        ExprParser p = new ExprParser(new CommonTokenStream(lexer));
+        ExprParser.ExprContext context = p.expr();
 
     }
 }
